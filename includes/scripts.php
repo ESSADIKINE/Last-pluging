@@ -140,9 +140,7 @@ function lebonresto_create_map_js() {
                     addRestaurantMarker(map, restaurant);
                 });
             })
-            .catch(error => {
-                console.error("Error loading restaurants:", error);
-            });
+            .catch(() => {});
     }
 
     function addRestaurantMarker(map, restaurant) {

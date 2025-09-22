@@ -161,11 +161,6 @@
         const closeMobileFilters = document.getElementById('close-mobile-filters');
         const mobileFilterPanel = document.querySelector('.mobile-filter-panel');
         
-        console.log('Initializing mobile filters...', {
-            btn: !!mobileFilterBtn,
-            overlay: !!mobileFilterOverlay,
-            panel: !!mobileFilterPanel
-        });
         
         // Open mobile filters
         if (mobileFilterBtn) {
@@ -409,7 +404,6 @@
             googleMapsLoaded = true;
         };
         script.onerror = function() {
-            console.error('Failed to load Google Maps API');
         };
         document.head.appendChild(script);
     }
@@ -448,7 +442,6 @@
             applyFilters();
         })
         .catch(error => {
-            console.error('Error loading restaurants:', error);
             showErrorState();
         })
         .finally(() => {
@@ -494,7 +487,6 @@
         const searchTerm = $('#restaurant-search').val().trim();
         if (searchTerm) {
             currentFilters.search = searchTerm;
-            console.log('Added search filter:', searchTerm);
         }
 
         // Distance filter
@@ -551,14 +543,6 @@
                 const descMatch = (meta.description || '').toLowerCase().includes(searchTerm);
                 const cityMatch = (meta.city || '').toLowerCase().includes(searchTerm);
                 
-                console.log(`Searching "${searchTerm}" in restaurant "${title}":`, {
-                    titleMatch,
-                    descMatch,
-                    cityMatch,
-                    title: title.toLowerCase(),
-                    description: (meta.description || '').toLowerCase(),
-                    city: (meta.city || '').toLowerCase()
-                });
                 
                 if (!titleMatch && !descMatch && !cityMatch) {
                     return false;
@@ -1167,32 +1151,16 @@
      * Show mobile filters
      */
     function showMobileFilters() {
-        console.log('=== SHOWING MOBILE FILTERS ===');
         const mobileFilterOverlay = document.getElementById('mobile-filter-overlay');
         const mobileFilterPanel = document.querySelector('.mobile-filter-panel');
         const mobileFilterToggle = document.querySelector('.mobile-filter-toggle1');
-        
-        console.log('Mobile filter elements found:', {
-            overlay: !!mobileFilterOverlay,
-            panel: !!mobileFilterPanel,
-            toggle: !!mobileFilterToggle
-        });
-        
-        if (mobileFilterOverlay) {
-            console.log('Overlay current classes:', mobileFilterOverlay.className);
-            console.log('Overlay current style:', mobileFilterOverlay.style.cssText);
-        }
-        
-        if (mobileFilterPanel) {
-            console.log('Panel current classes:', mobileFilterPanel.className);
-            console.log('Panel current style:', mobileFilterPanel.style.cssText);
-        }
+
+
         
         if (mobileFilterOverlay && mobileFilterPanel) {
             // Hide the filter button
             if (mobileFilterToggle) {
                 mobileFilterToggle.classList.add('filter-open');
-                console.log('Filter button hidden');
             }
             
             // Sync desktop values to mobile before showing
@@ -1208,7 +1176,6 @@
             mobileFilterOverlay.classList.remove('hidden');
             mobileFilterOverlay.classList.add('show');
             
-            console.log('Overlay styles applied, waiting to show panel...');
             
             setTimeout(() => {
                 mobileFilterPanel.style.transform = 'translateX(0)';
@@ -1216,19 +1183,9 @@
                 mobileFilterPanel.style.opacity = '1';
                 mobileFilterPanel.classList.add('show');
                 mobileFilterPanel.classList.remove('-translate-x-full');
-                console.log('Panel transform applied');
-                console.log('Panel final classes:', mobileFilterPanel.className);
-                console.log('Panel final style:', mobileFilterPanel.style.cssText);
             }, 50);
             
             document.body.style.overflow = 'hidden';
-            console.log('Body scroll locked');
-            console.log('=== MOBILE FILTER SHOW COMPLETE ===');
-        } else {
-            console.error('Mobile filter elements not found!', {
-                overlay: !!mobileFilterOverlay,
-                panel: !!mobileFilterPanel
-            });
         }
     }
 
@@ -1236,13 +1193,11 @@
      * Hide mobile filters
      */
     function hideMobileFilters() {
-        console.log('=== HIDING MOBILE FILTERS ===');
         const mobileFilterOverlay = document.getElementById('mobile-filter-overlay');
         const mobileFilterPanel = document.querySelector('.mobile-filter-panel');
         const mobileFilterToggle = document.querySelector('.mobile-filter-toggle1');
         
         if (mobileFilterPanel && mobileFilterOverlay) {
-            console.log('Starting hide animation...');
             
             // Start panel slide-out animation
             mobileFilterPanel.style.transform = 'translateX(-100%)';
@@ -1263,13 +1218,9 @@
                 // Show the filter button again
                 if (mobileFilterToggle) {
                     mobileFilterToggle.classList.remove('filter-open');
-                    console.log('Filter button shown again');
                 }
                 
-                console.log('=== MOBILE FILTER HIDE COMPLETE ===');
             }, 300);
-        } else {
-            console.error('Cannot hide mobile filters - elements not found');
         }
     }
 
@@ -2110,7 +2061,6 @@
     function initializeFullscreenMap() {
         const mapContainer = document.getElementById('fullscreen-map');
         if (!mapContainer || !window.google) {
-            console.error('Map container not found or Google Maps not loaded');
             return;
         }
 
