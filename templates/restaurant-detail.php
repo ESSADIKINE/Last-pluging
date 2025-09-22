@@ -172,8 +172,6 @@ $restaurant_id = get_the_ID();
 if (!$restaurant_id) {
     wp_die('Restaurant ID not found. Please check your permalink settings.');
 }
-
-// Debug mode - only show in development
 if (defined('WP_DEBUG') && WP_DEBUG) {
     echo '<!-- Debug: Restaurant ID = ' . $restaurant_id . ' -->';
     echo '<!-- Debug: Post Type = ' . get_post_type($restaurant_id) . ' -->';
@@ -1675,9 +1673,6 @@ html.lebonresto-detail-page {
         }
 
         // Map initialization (if coordinates are available)
-        console.log('Debug - Latitude:', '<?php echo $latitude; ?>');
-        console.log('Debug - Longitude:', '<?php echo $longitude; ?>');
-        console.log('Debug - Has coordinates:', <?php echo ($latitude && $longitude && is_numeric($latitude) && is_numeric($longitude)) ? 'true' : 'false'; ?>);
         
         // Validate coordinates before using them
         const hasValidCoordinates = <?php echo ($latitude && $longitude && is_numeric($latitude) && is_numeric($longitude)) ? 'true' : 'false'; ?>;
@@ -1686,27 +1681,20 @@ html.lebonresto-detail-page {
         
         <?php if ($latitude && $longitude && is_numeric($latitude) && is_numeric($longitude)): ?>
         function initializeMap() {
-            console.log('initializeMap called');
-            console.log('Leaflet available:', typeof L !== 'undefined');
-            console.log('Coordinates:', restaurantLat, restaurantLng);
             
             if (typeof L === 'undefined') {
-                console.error('Leaflet library not loaded');
                 return;
             }
             
             // Validate coordinates
             if (!hasValidCoordinates || !restaurantLat || !restaurantLng) {
-                console.error('Invalid coordinates for map initialization');
                 return;
             }
             
             // Clear any existing content
             const mapContainer = document.getElementById('restaurant-map');
-            console.log('Map container found:', !!mapContainer);
             
             if (!mapContainer) {
-                console.error('Map container not found');
                 return;
             }
             
@@ -1865,7 +1853,6 @@ html.lebonresto-detail-page {
                                     <a href="<?php 
                                         $restaurant_name = $blog_title ?: get_the_title();
                                         $restaurant_slug = sanitize_title($restaurant_name);
-                                        // Debug: Uncomment the line below to see what values we're getting
                                         // echo '<!-- Debug: blog_title=' . $blog_title . ', get_the_title()=' . get_the_title() . ', restaurant_name=' . $restaurant_name . ', slug=' . $restaurant_slug . ' -->';
                                         echo esc_url(home_url('/details/' . $restaurant_slug . '/#details-section')); 
                                     ?>" 
@@ -1938,9 +1925,7 @@ html.lebonresto-detail-page {
                     }
                 }, 100);
                 
-                console.log('Map initialized successfully with custom marker and popup');
             } catch (error) {
-                console.error('Error initializing map:', error);
                 mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--bg-tertiary); color: var(--text-muted);"><div style="text-align: center;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>Erreur lors du chargement de la carte</p></div></div>';
             }
         }
@@ -1978,26 +1963,20 @@ html.lebonresto-detail-page {
             }
         });
         <?php else: ?>
-        console.log('No valid coordinates available for map - using default coordinates');
         // Show map with default coordinates (Casablanca) and a message
         function initializeMapWithDefaults() {
-            console.log('initializeMapWithDefaults called');
-            console.log('Leaflet available:', typeof L !== 'undefined');
             
             if (typeof L === 'undefined') {
-                console.error('Leaflet library not loaded');
                 return;
             }
             
             // Validate that we have default coordinates
             if (!defaultLat || !defaultLng || isNaN(defaultLat) || isNaN(defaultLng)) {
-                console.error('Invalid default coordinates');
                 return;
             }
             
             const mapContainer = document.getElementById('restaurant-map');
             if (!mapContainer) {
-                console.error('Map container not found');
                 return;
             }
             
@@ -2153,9 +2132,7 @@ html.lebonresto-detail-page {
                     }
                 }, 100);
                 
-                console.log('Map with default coordinates initialized successfully');
             } catch (error) {
-                console.error('Error initializing map with defaults:', error);
                 mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--bg-tertiary); color: var(--text-muted);"><div style="text-align: center;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>Erreur lors du chargement de la carte</p></div></div>';
             }
         }
@@ -2430,7 +2407,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // If Font Awesome is not loaded, try to load it
         if (!fontFamily.includes('Font Awesome') && !fontFamily.includes('FontAwesome')) {
-            console.log('Font Awesome not detected, loading fallback...');
             
             // Create and inject Font Awesome CSS
             const link = document.createElement('link');
