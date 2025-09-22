@@ -1951,7 +1951,6 @@ wp_add_inline_style('lebonresto-single-css', '
         
         <div id="google-reviews-container">
             <?php 
-            // Debug information (remove in production)
             error_log('LEBONRESTO REVIEWS LOG: DISPLAY SECTION - Starting display logic');
             error_log('LEBONRESTO REVIEWS LOG: DISPLAY SECTION - Reviews array: ' . print_r($google_api_reviews, true));
             
@@ -2180,27 +2179,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mobile filter functionality
 function initializeMobileFilterHandlers() {
-    console.log('Initializing mobile filter handlers...');
     
     const mobileFilterBtn = document.getElementById('mobile-filter-btn');
     const mobileFilterOverlay = document.getElementById('mobile-filter-overlay');
     const mobileFilterPanel = document.querySelector('.mobile-filter-panel');
     
-    console.log('Elements found:', {
-        btn: !!mobileFilterBtn,
-        overlay: !!mobileFilterOverlay,
-        panel: !!mobileFilterPanel
-    });
     
     // Check if elements exist
     if (!mobileFilterBtn || !mobileFilterOverlay || !mobileFilterPanel) {
-        console.error('Mobile filter elements not found!');
         return;
     }
     
     // Open mobile filter panel
     function openMobileFilter() {
-        console.log('Opening mobile filter');
                 mobileFilterOverlay.classList.remove('hidden');
         mobileFilterOverlay.classList.add('show');
         mobileFilterPanel.classList.add('show');
@@ -2210,7 +2201,6 @@ function initializeMobileFilterHandlers() {
     
     // Close mobile filter panel
     function closeMobileFilter() {
-        console.log('Closing mobile filter');
         mobileFilterPanel.classList.remove('show');
         mobileFilterPanel.classList.add('-translate-x-full');
         setTimeout(() => {
@@ -2224,14 +2214,12 @@ function initializeMobileFilterHandlers() {
     mobileFilterBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Mobile filter button clicked!');
         openMobileFilter();
     });
     
     // Close on overlay click
         mobileFilterOverlay.addEventListener('click', function(e) {
             if (e.target === mobileFilterOverlay) {
-            console.log('Overlay clicked');
             closeMobileFilter();
         }
     });
@@ -2239,7 +2227,6 @@ function initializeMobileFilterHandlers() {
     // Close on Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && mobileFilterOverlay.classList.contains('show')) {
-            console.log('Escape key pressed');
             closeMobileFilter();
         }
     });
@@ -2250,7 +2237,6 @@ function initializeMobileFilterHandlers() {
         if (closeMobileFilters) {
             closeMobileFilters.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Close button clicked');
                 closeMobileFilter();
             });
         }
@@ -2533,7 +2519,6 @@ function initializeMobileTabs() {
         const mapButton = document.getElementById('mobile-tab-map');
         
         tabButtons.forEach((button, index) => {
-            console.log(`🔧 [MOBILE TABS] Button ${index}:`, button.id, button);
             
             // Test if button is clickable
             button.style.pointerEvents = 'auto';
@@ -2549,9 +2534,7 @@ function initializeMobileTabs() {
         
         // Also add direct event listeners as backup
         if (vrButton) {
-            console.log('🔧 [MOBILE TABS] Adding direct event listener to VR button');
             vrButton.addEventListener('click', function(e) {
-                console.log('🔧 [MOBILE TABS] Direct VR button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
                 handleTabClick.call(this, e);
@@ -2559,9 +2542,7 @@ function initializeMobileTabs() {
         }
         
         if (mapButton) {
-            console.log('🔧 [MOBILE TABS] Adding direct event listener to Map button');
             mapButton.addEventListener('click', function(e) {
-                console.log('🔧 [MOBILE TABS] Direct Map button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
                 handleTabClick.call(this, e);
@@ -2569,30 +2550,19 @@ function initializeMobileTabs() {
         }
         
         // Test if buttons are clickable by adding a simple test
-        console.log('🔧 [MOBILE TABS] Testing button clickability...');
         if (vrButton) {
             vrButton.onclick = function() {
-                console.log('🔧 [MOBILE TABS] VR button onclick triggered!');
             };
         }
         if (mapButton) {
             mapButton.onclick = function() {
-                console.log('🔧 [MOBILE TABS] Map button onclick triggered!');
             };
         }
         
-        console.log('🔧 [MOBILE TABS] Mobile tab system initialized!');
         
         // Test if buttons are clickable
         setTimeout(() => {
-            console.log('🔧 [MOBILE TABS] Testing button clickability...');
             tabButtons.forEach((button, index) => {
-                console.log(`🔧 [MOBILE TABS] Button ${index} (${button.id}):`, {
-                    element: button,
-                    classes: button.className,
-                    style: button.style.cssText,
-                    computedStyle: window.getComputedStyle(button)
-                });
             });
         }, 1000);
     }, 500); // Wait 500ms for DOM to be ready
@@ -2615,7 +2585,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Check if mobile (screen width <= 1023px)
         if (window.innerWidth <= 1023) {
             // Mobile: Force disable all scrolling
-            console.log('🔧 [MOBILE DEBUG] Applying mobile scroll disable...');
             rightColumn.style.overflowY = 'hidden';
             rightColumn.style.overflowX = 'hidden';
             rightColumn.style.maxHeight = 'none';
@@ -2624,7 +2593,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Disable scroll in restaurants container on mobile
             if (restaurantsContainer) {
-                console.log('🔧 [MOBILE DEBUG] Disabling restaurants container scroll...');
                 restaurantsContainer.style.overflowY = 'visible';
                 restaurantsContainer.style.overflowX = 'visible';
                 restaurantsContainer.style.maxHeight = 'none';
@@ -2639,7 +2607,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 child.style.maxHeight = 'none';
             });
             
-            console.log('🔧 [MOBILE DEBUG] Mobile scroll disable applied!');
         } else {
             // Enable scroll on desktop
         rightColumn.style.overflowY = 'auto';
@@ -2656,7 +2623,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize mobile filter functionality
-    console.log('🔧 [MOBILE DEBUG] Calling initializeMobileFilters...');
     initializeMobileFilters();
     
     // Handle window resize to update scroll behavior and tab visibility
@@ -2734,16 +2700,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Also initialize on window load as backup
 window.addEventListener('load', function() {
-    console.log('🔧 [MOBILE TABS] Window loaded, re-initializing mobile tabs...');
     setTimeout(() => {
         initializeMobileTabs();
     }, 200);
 });
 
 // Syntax validation check
-if (typeof window !== 'undefined') {
-    console.log('✅ Single restaurant JavaScript loaded successfully');
-}
+
 </script>
 
 <?php
@@ -4594,17 +4557,13 @@ button:focus {
 </style>
 
 <script>
-// Debug and ensure fullscreen functions are available
-console.log('Single restaurant template loaded');
 
 // Load current restaurant data
 const currentRestaurantDataElement = document.getElementById('current-restaurant-data');
 if (currentRestaurantDataElement) {
     try {
         window.currentRestaurantData = JSON.parse(currentRestaurantDataElement.textContent);
-        console.log('Current restaurant data loaded:', window.currentRestaurantData);
     } catch (e) {
-        console.error('Error parsing current restaurant data:', e);
     }
 }
 
@@ -4613,56 +4572,39 @@ const allRestaurantsDataElement = document.getElementById('all-restaurants-data'
 if (allRestaurantsDataElement) {
     try {
         window.allRestaurants = JSON.parse(allRestaurantsDataElement.textContent);
-        console.log('All restaurants data loaded:', window.allRestaurants.length, 'restaurants');
     } catch (e) {
-        console.error('Error parsing all restaurants data:', e);
     }
-} else {
-    console.warn('All restaurants data element not found');
 }
 
 // Ensure functions are available globally
 window.openMapFullscreen = function() {
-    console.log('openMapFullscreen called');
     const modal = document.getElementById('fullscreen-map-modal');
     if (modal) {
-        console.log('Map modal found, showing...');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         
         // Initialize fullscreen map after modal is shown
         setTimeout(() => {
-            console.log('About to initialize fullscreen map...');
-            console.log('window.allRestaurants available:', !!window.allRestaurants);
-            console.log('window.allRestaurants length:', window.allRestaurants ? window.allRestaurants.length : 'undefined');
             
             if (typeof initializeFullscreenMap === 'function') {
                 initializeFullscreenMap();
             } else {
-                console.log('initializeFullscreenMap function not found, using existing map logic');
                 // Use the existing map initialization logic
                 initializeFullscreenMapWithExistingLogic();
             }
         }, 500);
-    } else {
-        console.error('Map modal not found');
     }
 };
 
 window.openVirtualTourFullscreen = function() {
-    console.log('openVirtualTourFullscreen called');
     const modal = document.getElementById('fullscreen-virtual-tour-modal');
     if (modal) {
-        console.log('Virtual tour modal found, showing...');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-    } else {
-        console.error('Virtual tour modal not found');
     }
 };
 
 window.closeMapFullscreen = function() {
-    console.log('closeMapFullscreen called');
     const modal = document.getElementById('fullscreen-map-modal');
     if (modal) {
         modal.style.display = 'none';
@@ -4671,7 +4613,6 @@ window.closeMapFullscreen = function() {
 };
 
 window.closeVirtualTourFullscreen = function() {
-    console.log('closeVirtualTourFullscreen called');
     const modal = document.getElementById('fullscreen-virtual-tour-modal');
     if (modal) {
         modal.style.display = 'none';
@@ -4681,15 +4622,12 @@ window.closeVirtualTourFullscreen = function() {
 
 // Initialize fullscreen map using the same implementation as all-restaurants popup
 window.initializeFullscreenMapWithExistingLogic = function() {
-    console.log('initializeFullscreenMapWithExistingLogic called');
     
     const mapContainer = document.getElementById('fullscreen-map');
     if (!mapContainer || !window.L) {
-        console.error('Map container not found or Leaflet not loaded');
         return;
     }
 
-    console.log('Map container found, Leaflet loaded');
 
     // Clear existing map
     if (window.fullscreenMapInstance) {
@@ -4709,11 +4647,9 @@ window.initializeFullscreenMapWithExistingLogic = function() {
             centerLat = lat;
             centerLng = lng;
             zoom = 14;
-            console.log('Using current restaurant location:', centerLat, centerLng);
         }
     }
 
-    console.log('Initializing map with center:', centerLat, centerLng, 'zoom:', zoom);
 
     // Initialize map
     window.fullscreenMapInstance = L.map('fullscreen-map').setView([centerLat, centerLng], zoom);
@@ -4723,7 +4659,6 @@ window.initializeFullscreenMapWithExistingLogic = function() {
         attribution: '© OpenStreetMap contributors'
     }).addTo(window.fullscreenMapInstance);
 
-    console.log('Map initialized, adding markers...');
 
     // Add markers for all restaurants using the same logic as all-restaurants popup
     addRestaurantMarkersToFullscreenMap();
@@ -4732,7 +4667,6 @@ window.initializeFullscreenMapWithExistingLogic = function() {
 // Add restaurant markers to fullscreen map (same as all-restaurants popup)
 function addRestaurantMarkersToFullscreenMap() {
     if (!window.fullscreenMapInstance) {
-        console.error('Fullscreen map instance not found');
         return;
     }
 
@@ -4741,20 +4675,15 @@ function addRestaurantMarkersToFullscreenMap() {
     
     // Fallback: try to get data from the existing map markers
     if (restaurants.length === 0 && window.map && window.markersLayer) {
-        console.log('Trying to get restaurants from existing map markers...');
         const existingMarkers = window.markersLayer.getLayers();
-        console.log('Existing markers found:', existingMarkers.length);
         // For now, we'll use the current restaurant data as a fallback
         if (window.currentRestaurantData) {
             restaurants = [window.currentRestaurantData];
-            console.log('Using current restaurant data as fallback');
         }
     }
     
-    console.log('Restaurants data for fullscreen map:', restaurants);
 
     if (restaurants.length === 0) {
-        console.warn('No restaurants data available for fullscreen map');
         return;
     }
 
@@ -4767,13 +4696,11 @@ function addRestaurantMarkersToFullscreenMap() {
         const lng = parseFloat(meta.longitude);
         
         if (!isNaN(lat) && !isNaN(lng)) {
-            console.log(`Creating marker for restaurant: ${restaurant.title?.rendered} at [${lat}, ${lng}]`);
             
             const rating = parseFloat(meta.google_rating || meta.local_rating || 0);
             const reviewCount = parseInt(meta.google_review_count || meta.local_review_count || 0);
             const isCurrent = restaurant.id === window.currentRestaurantData?.id;
 
-            console.log(`Restaurant: ${restaurant.title?.rendered || 'Unknown'}, Rating: ${rating}, ReviewCount: ${reviewCount}`);
 
             // Generate stars function (same as all-restaurants)
             const generateStars = (rating) => {
@@ -4791,7 +4718,6 @@ function addRestaurantMarkersToFullscreenMap() {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = title;
                     const cleanText = tempDiv.textContent || tempDiv.innerText || 'Restaurant';
-                    console.log('Original title:', title, 'Clean title:', cleanText);
                     return cleanText;
                 }
                 return title?.rendered || 'Restaurant';
@@ -4841,31 +4767,24 @@ function addRestaurantMarkersToFullscreenMap() {
             });
 
             const popupContent = createRestaurantPopupContent(restaurant);
-            console.log('Popup content created:', popupContent);
 
             const marker = L.marker([lat, lng], { icon: customIcon })
                 .addTo(window.fullscreenMapInstance)
                 .bindPopup(popupContent);
 
-            console.log(`Marker created and added for: ${cleanTitle}`);
             window.fullscreenMarkers.push(marker);
 
             // Open popup for current restaurant
             if (isCurrent) {
                 marker.openPopup();
-                console.log(`Opened popup for current restaurant: ${cleanTitle}`);
             }
         }
     });
 
     // Fit map to show all markers
-    console.log(`Total markers created: ${window.fullscreenMarkers.length}`);
     if (window.fullscreenMarkers.length > 0) {
         const group = new L.featureGroup(window.fullscreenMarkers);
         window.fullscreenMapInstance.fitBounds(group.getBounds().pad(0.1));
-        console.log('Map bounds fitted to show all markers');
-    } else {
-        console.warn('No markers were created for the fullscreen map');
     }
 }
 
@@ -4878,7 +4797,6 @@ function escapeHtml(text) {
 
 // Create restaurant popup content using the same format as the main map
 function createRestaurantPopupContent(restaurant) {
-    console.log('Creating popup for restaurant:', restaurant);
     
     // Get restaurant data from the restaurant object
     const restaurantMeta = restaurant.restaurant_meta || {};
@@ -4902,9 +4820,6 @@ function createRestaurantPopupContent(restaurant) {
     
     const title = getCleanTitle(restaurant.title);
     
-    console.log('Popup data:', { title, rating, reviewCount, cuisine, priceRange, address, phone });
-    console.log('Original restaurant title:', restaurant.title);
-    console.log('Cleaned title:', title);
 
     // Generate rating stars
     const ratingStars = Array.from({ length: 5 }, (_, i) => {
@@ -4981,20 +4896,11 @@ function createRestaurantPopupContent(restaurant) {
 
 // Test if icons are clickable
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, checking fullscreen icons...');
     
     const mapIcon = document.querySelector('.map-fullscreen-icon');
     const vtIcon = document.querySelector('.virtual-tour-fullscreen-icon');
-    
-    console.log('Map icon found:', !!mapIcon);
-    console.log('Virtual tour icon found:', !!vtIcon);
-    
-    if (mapIcon) {
-        console.log('Map icon styles:', window.getComputedStyle(mapIcon));
-    }
-    if (vtIcon) {
-        console.log('Virtual tour icon styles:', window.getComputedStyle(vtIcon));
-    }
+
+
 });
 </script>
 
