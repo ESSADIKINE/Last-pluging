@@ -1162,9 +1162,6 @@
             }
     
             // Map initialization (if coordinates are available)
-            console.log('Debug - Latitude:', '33.574489');
-            console.log('Debug - Longitude:', '-7.630203');
-            console.log('Debug - Has coordinates:', true);
             
             // Validate coordinates before using them
             const hasValidCoordinates = true;
@@ -1172,27 +1169,20 @@
             const restaurantLng = -7.630203;
             
                     function initializeMap() {
-                console.log('initializeMap called');
-                console.log('Leaflet available:', typeof L !== 'undefined');
-                console.log('Coordinates:', restaurantLat, restaurantLng);
                 
                 if (typeof L === 'undefined') {
-                    console.error('Leaflet library not loaded');
                     return;
                 }
                 
                 // Validate coordinates
                 if (!hasValidCoordinates || !restaurantLat || !restaurantLng) {
-                    console.error('Invalid coordinates for map initialization');
                     return;
                 }
                 
                 // Clear any existing content
                 const mapContainer = document.getElementById('restaurant-map');
-                console.log('Map container found:', !!mapContainer);
                 
                 if (!mapContainer) {
-                    console.error('Map container not found');
                     return;
                 }
                 
@@ -1391,9 +1381,7 @@
                         }
                     }, 100);
                     
-                    console.log('Map initialized successfully with custom marker and popup');
                 } catch (error) {
-                    console.error('Error initializing map:', error);
                     mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--bg-tertiary); color: var(--text-muted);"><div style="text-align: center;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>Erreur lors du chargement de la carte</p></div></div>';
                 }
             }

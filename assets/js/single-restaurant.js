@@ -32,23 +32,16 @@
      */
     function initializeSingleRestaurantUpdated() {
         
-        // Check if Tailwind is loaded
-        if (!document.querySelector('[href*="tailwindcss"]')) {
-            console.warn('Tailwind CSS may not be loaded');
-        }
-        
         // Get current restaurant data
         const restaurantDataElement = document.getElementById('current-restaurant-data');
         if (restaurantDataElement) {
             try {
                 window.currentRestaurantData = JSON.parse(restaurantDataElement.textContent);
                 currentRestaurantId = window.currentRestaurantData.id;
-                console.log('Current restaurant ID:', currentRestaurantId);
             } catch (error) {
-                console.error('Error parsing restaurant data:', error);
+                window.currentRestaurantData = null;
+                currentRestaurantId = null;
             }
-        } else {
-            console.warn('Restaurant data element not found');
         }
 
         // Initialize map
@@ -72,7 +65,6 @@
         
         const mapContainer = document.getElementById('restaurants-map');
         if (!mapContainer) {
-            console.error('Map container not found!');
             return;
         }
 
@@ -226,8 +218,6 @@
                 }, 100);
                 
             });
-        } else {
-            console.error('Mobile apply filters button not found!');
         }
         
         if (mobileClearAll) {
@@ -258,8 +248,6 @@
             // Restore body scroll
             document.body.style.overflow = '';
             
-        } else {
-            console.error('Could not find mobile filter elements to close');
         }
     }
     
@@ -472,7 +460,6 @@
      */
     function loadAllRestaurants() {
         if (!lebonrestoSingle?.apiUrl) {
-            console.error('API URL not available');
             return;
         }
 
@@ -502,12 +489,7 @@
         })
         .then(restaurants => {
             allRestaurants = Array.isArray(restaurants) ? restaurants : [];
-            
-            // Debug: Log first restaurant data to see structure
-            if (allRestaurants.length > 0) {
-                console.log('First restaurant from API:', allRestaurants[0]);
-                console.log('Principal image data:', allRestaurants[0].restaurant_meta?.principal_image);
-            }
+
             
             // Update map markers
             updateMapMarkers();
@@ -526,7 +508,6 @@
             showRestaurantListLoading(false);
         })
         .catch(error => {
-            console.error('Error loading restaurants:', error);
             updateResultsCount(lebonrestoSingle.strings?.loadingError || 'Erreur lors du chargement des restaurants', true);
             showRestaurantListLoading(false);
         });
@@ -536,14 +517,11 @@
      * Update map markers
      */
     function updateMapMarkers() {
-        console.log('🗺️ Updating map markers...');
-        console.log('All restaurants count:', allRestaurants.length);
         
         // Clear existing markers
         markersLayer.clearLayers();
 
         if (allRestaurants.length === 0) {
-            console.log('No restaurants to display on map');
             return;
         }
 
@@ -552,11 +530,7 @@
             const lat = parseFloat(meta.latitude);
             const lng = parseFloat(meta.longitude);
 
-            // Debug logging for coordinates
-            console.log(`Restaurant: ${restaurant.title?.rendered}, Lat: ${lat}, Lng: ${lng}, Valid: ${!isNaN(lat) && !isNaN(lng)}`);
-
             if (isNaN(lat) || isNaN(lng)) {
-                console.warn(`Invalid coordinates for restaurant ${restaurant.title?.rendered}: lat=${meta.latitude}, lng=${meta.longitude}`);
                 return;
             }
 
@@ -665,7 +639,6 @@
             }
 
             const marker = L.marker([lat, lng], { icon: markerIcon });
-            console.log(`Created marker for ${restaurant.title?.rendered} at [${lat}, ${lng}] with icon:`, markerIcon);
             
             // Create popup content
             const popupContent = createMarkerPopup(restaurant, isCurrentRestaurant);
@@ -681,15 +654,12 @@
 
             // Add click handler
             marker.on('click', function() {
-                console.log(`Marker clicked for ${restaurant.title?.rendered}`);
                 // Highlight functionality removed
             });
 
             markersLayer.addLayer(marker);
-            console.log(`Added marker for ${restaurant.title?.rendered} at [${lat}, ${lng}]`);
         });
 
-        console.log(`Total markers added: ${markersLayer.getLayers().length}`);
 
         // Highlight current restaurant
         highlightCurrentRestaurant();
@@ -699,13 +669,8 @@
      * Fit map to show all visible markers
      */
     function fitMapToMarkers() {
-        console.log('🎯 Fitting map to markers...');
-        console.log('Map exists:', !!map);
-        console.log('Markers layer exists:', !!markersLayer);
-        console.log('Markers count:', markersLayer ? markersLayer.getLayers().length : 0);
         
         if (!map || !markersLayer || markersLayer.getLayers().length === 0) {
-            console.log('Cannot fit map - missing map, markers layer, or no markers');
             return;
         }
 
@@ -713,15 +678,12 @@
         const bounds = L.latLngBounds();
         markersLayer.eachLayer(function(marker) {
             const latLng = marker.getLatLng();
-            console.log('Marker position:', latLng);
             bounds.extend(latLng);
         });
 
-        console.log('Bounds:', bounds);
 
         // Fit map to show all markers with some padding
         if (bounds.isValid() && bounds.getNorth() !== bounds.getSouth()) {
-            console.log('Fitting bounds to show all markers');
             map.fitBounds(bounds, {
                 padding: [20, 20], // Add padding around the bounds
                 maxZoom: 15 // Don't zoom in too much
@@ -730,10 +692,8 @@
             // If only one marker, center on it with a reasonable zoom level
             const singleMarker = markersLayer.getLayers()[0];
             const latLng = singleMarker.getLatLng();
-            console.log('Centering on single marker:', latLng);
             map.setView(latLng, 13);
         } else {
-            console.log('No valid bounds found, using default view');
             // Fallback to default view
             const center = lebonrestoSingle?.mapCenter || { lat: 33.5731, lng: -7.5898 }; // Casablanca
             map.setView([center.lat, center.lng], 10);
@@ -748,9 +708,6 @@
         const title = restaurant.title?.rendered || 'Restaurant';
         const isFeatured = meta.is_featured === '1';
         const principalImage = meta.principal_image || {};
-
-        // Debug logging
-        console.log('Creating popup for restaurant:', restaurant);
 
         // Create restaurant slug for URL
         const restaurantSlug = title.toLowerCase()
@@ -779,15 +736,6 @@
         const localReviewCount = parseInt(meta.review_count) || 0;
         const reviewCount = googleReviewCount > 0 ? googleReviewCount : localReviewCount;
         
-        console.log('Rating data for popup:', {
-            googleRating: googleRating,
-            localRating: localRating,
-            finalRating: rating,
-            googleReviewCount: googleReviewCount,
-            localReviewCount: localReviewCount,
-            finalReviewCount: reviewCount,
-            meta: meta
-        });
         
         // Show rating if we have actual data
         if (rating && rating > 0) {

@@ -160,7 +160,6 @@
      */
     function loadAllRestaurants(filters = {}) {
         if (!lebonrestoSingle?.apiUrl) {
-            console.error('API URL not available');
             return;
         }
 
@@ -200,7 +199,6 @@
                 showRestaurantListLoading(false);
             })
             .catch(error => {
-                console.error('Error loading restaurants:', error);
                 updateResultsCount('Erreur lors du chargement des restaurants', true);
                 showRestaurantListLoading(false);
             });
@@ -307,11 +305,6 @@
         const isFeatured = meta.is_featured === '1';
         const isCurrentRestaurant = restaurant.id === currentRestaurantId;
         const principalImage = meta.principal_image || {};
-
-        // Debug logging
-        console.log('🚀 SINGLE-RESTAURANT-MAP.JS IS RUNNING!');
-        console.log('Creating popup for:', title);
-        console.log('Principal image data:', principalImage);
 
         let content = `<div class="restaurant-popup-content">`;
         
