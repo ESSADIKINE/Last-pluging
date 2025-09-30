@@ -17,6 +17,15 @@
     let hasMoreResults = true;
     let userLocation = null;
     let googleMapsLoaded = false;
+    let fullscreenLeafletMap = null;
+    let fullscreenLeafletMarkers = [];
+    let fullscreenMapMode = null;
+
+    const MOROCCO_CENTER = {
+        lat: 31.7917,
+        lng: -7.0926,
+        zoom: 6
+    };
 
     const MOROCCO_CENTER = {
         lat: 31.7917,
@@ -1310,6 +1319,202 @@
         return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     }
 
+    function getRestaurantCoordinates(restaurant) {
+        if (!restaurant) return null;
+        const meta = restaurant.restaurant_meta || {};
+        const lat = meta.latitude ?? restaurant.latitude;
+        const lng = meta.longitude ?? restaurant.longitude;
+        const latNum = parseFloat(lat);
+        const lngNum = parseFloat(lng);
+
+        if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+            return { lat: latNum, lng: lngNum };
+        }
+
+        return null;
+    }
+
+    function getRestaurantRatingData(restaurant) {
+        const meta = restaurant?.restaurant_meta || {};
+        const googleRating = parseFloat(meta.google_rating);
+        const localRating = parseFloat(meta.average_rating || restaurant?.average_rating);
+        const rating = (!Number.isNaN(googleRating) && googleRating > 0)
+            ? googleRating
+            : (!Number.isNaN(localRating) && localRating > 0 ? localRating : 0);
+
+        const googleReviews = parseInt(meta.google_review_count, 10);
+        const localReviews = parseInt(meta.review_count || restaurant?.review_count, 10);
+        const reviewCount = (!Number.isNaN(googleReviews) && googleReviews > 0)
+            ? googleReviews
+            : (!Number.isNaN(localReviews) && localReviews > 0 ? localReviews : 0);
+
+        const priceRange = meta.price_range || restaurant?.price_range || '';
+        let cuisines = '';
+        if (Array.isArray(meta.cuisine_types)) {
+            cuisines = meta.cuisine_types.filter(Boolean).slice(0, 3).join(', ');
+        } else if (typeof meta.cuisine_types === 'string') {
+            cuisines = meta.cuisine_types.split(',').map(str => str.trim()).filter(Boolean).slice(0, 3).join(', ');
+        }
+
+        const specialties = Array.isArray(meta.specialties)
+            ? meta.specialties.filter(Boolean).slice(0, 3).join(', ')
+            : (meta.specialties || meta.speciality || '');
+
+        return {
+            rating,
+            reviewCount,
+            priceRange,
+            cuisines,
+            specialties
+        };
+    }
+
+    function getRestaurantMapsUrl(restaurant, coords = null) {
+        const meta = restaurant?.restaurant_meta || {};
+        const adminLink = meta.restaurant_google_maps_link || meta.google_maps_link || restaurant?.google_maps_link;
+        if (adminLink) return adminLink;
+
+        const placeId = meta.google_place_id || restaurant?.google_place_id;
+        if (placeId) {
+            return `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId)}&query=${encodeURIComponent(restaurant?.title || '')}`;
+        }
+
+        if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+            return `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`;
+        }
+
+        const address = meta.address || restaurant?.address;
+        if (address) {
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        }
+
+        return '';
+    }
+
+    function generateStarIcons(rating) {
+        if (!rating || rating <= 0) {
+            return '';
+        }
+
+        const rounded = Math.round(rating * 2) / 2;
+        let starsHtml = '';
+
+        for (let i = 1; i <= 5; i++) {
+            if (rounded >= i) {
+                starsHtml += '<span style="color: #fbbf24;">★</span>';
+            } else if (rounded >= i - 0.5) {
+                starsHtml += '<span style="color: #fbbf24;">☆</span>';
+            } else {
+                starsHtml += '<span style="color: #d1d5db;">★</span>';
+            }
+        }
+
+        return starsHtml;
+    }
+
+    function getRestaurantDetailUrl(restaurant) {
+        if (!restaurant) return '#';
+        if (restaurant.permalink) return restaurant.permalink;
+
+        const baseFromSettings = (typeof lebonrestoAll !== 'undefined'
+            && lebonrestoAll.settings
+            && lebonrestoAll.settings.siteUrl)
+            ? lebonrestoAll.settings.siteUrl
+            : (typeof window !== 'undefined' ? window.location.origin : '');
+
+        if (restaurant.slug) {
+            const normalizedBase = baseFromSettings ? baseFromSettings.replace(/\/$/, '') : '';
+            return `${normalizedBase}/details/${restaurant.slug}/`;
+        }
+
+        return baseFromSettings || '#';
+    }
+
+    function buildFullscreenPopupContent(restaurant, coords) {
+        const meta = restaurant?.restaurant_meta || {};
+        const ratingData = getRestaurantRatingData(restaurant);
+        const ratingText = ratingData.rating > 0 ? ratingData.rating.toFixed(1) : '';
+        const reviewText = ratingData.reviewCount > 0 ? `${ratingData.reviewCount} avis` : '';
+        const combinedMeta = [ratingData.cuisines, ratingData.specialties, ratingData.priceRange]
+            .filter(Boolean)
+            .join(' • ');
+        const image = meta.listing_image || restaurant?.principal_image || meta.featured_image || 'https://via.placeholder.com/80x80?text=Resto';
+        const phone = meta.phone || restaurant?.phone || '';
+        const phoneDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
+        const mapsUrl = getRestaurantMapsUrl(restaurant, coords);
+        const detailUrl = getRestaurantDetailUrl(restaurant);
+        const city = meta.city || restaurant?.city || '';
+        const address = meta.address || restaurant?.address || '';
+
+        return `
+            <div style="display: flex; gap: 12px; align-items: flex-start; max-width: 320px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <div style="flex-shrink: 0; border-radius: 12px; overflow: hidden; width: 80px; height: 80px; box-shadow: 0 8px 20px rgba(15, 23, 41, 0.2);">
+                    <img src="${escapeHtml(image)}" alt="${escapeHtml(restaurant?.title || '')}" style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 600; color: #0f1729; line-height: 1.3;">${escapeHtml(restaurant?.title || '')}</h3>
+                    ${address ? `<p style="margin: 0; font-size: 13px; color: #4b5563;">${escapeHtml(address)}</p>` : ''}
+                    ${city ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">${escapeHtml(city)}</p>` : ''}
+                    ${combinedMeta ? `<p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280;">${escapeHtml(combinedMeta)}</p>` : ''}
+                    ${ratingText ? `
+                        <div style="margin: 12px 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                            <div style="display: flex; gap: 2px; font-size: 14px;">${generateStarIcons(ratingData.rating)}</div>
+                            <div style="font-weight: 600; font-size: 14px; color: #0f1729;">${escapeHtml(ratingText)}</div>
+                            ${reviewText ? `<div style="font-size: 12px; color: #6b7280;">(${escapeHtml(reviewText)})</div>` : ''}
+                        </div>
+                    ` : ''}
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;">
+                        ${phoneDigits ? `
+                            <a href="https://wa.me/${phoneDigits}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #fff; text-decoration: none; box-shadow: 0 8px 20px rgba(18, 140, 126, 0.3);">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+                                </svg>
+                            </a>
+                        ` : ''}
+                        ${mapsUrl ? `
+                            <a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #4285F4 0%, #3367D6 100%); color: #fff; text-decoration: none; box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                </svg>
+                            </a>
+                        ` : ''}
+                        <a href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: center; height: 36px; border-radius: 18px; padding: 0 16px; background: linear-gradient(135deg, #fedc00 0%, #fbbf24 100%); color: #0f1729; font-weight: 600; font-size: 13px; text-decoration: none; box-shadow: 0 10px 25px rgba(251, 191, 36, 0.35);">
+                            Voir le détail
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildLeafletMarkerIcon(restaurant) {
+        const ratingData = getRestaurantRatingData(restaurant);
+        const ratingHtml = ratingData.rating > 0
+            ? `<div class="marker-stars" style="display: flex; align-items: center; gap: 6px;">${generateStarIcons(ratingData.rating)} <span style="font-size: 0.75rem; color: #0f1729; font-weight: 600;">${ratingData.rating.toFixed(1)}</span></div>`
+            : '';
+
+        return `
+            <div class="marker-with-label">
+                <div class="marker-icon regular">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+                        <defs>
+                            <linearGradient id="markerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#fedc00" />
+                                <stop offset="100%" stop-color="#f59e0b" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M20 2C11.716 2 5 8.716 5 17c0 9.5 13.063 21.063 14.104 22.01a1.5 1.5 0 0 0 1.792 0C21.937 38.063 35 26.5 35 17 35 8.716 28.284 2 20 2z" fill="url(#markerGradient)" stroke="#0f1729" stroke-width="2" />
+                        <circle cx="20" cy="17" r="6" fill="#0f1729" />
+                    </svg>
+                </div>
+                <div class="marker-label" style="text-align: center; background: rgba(255, 255, 255, 0.95); padding: 8px 10px; border-radius: 10px; box-shadow: 0 10px 25px rgba(15, 23, 41, 0.15);">
+                    <div class="marker-title" style="font-size: 0.85rem; font-weight: 600; color: #0f1729; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(restaurant?.title || '')}</div>
+                    ${ratingHtml}
+                </div>
+            </div>
+        `;
+    }
+
     // Make functions globally available for debugging
     window.lebonrestoAllRedesigned = {
         loadRestaurants,
@@ -2073,7 +2278,6 @@
                 if (typeof openMapFullscreen === 'function' && googleMapsLoaded && window.google && window.google.maps) {
                     openMapFullscreen();
                 } else {
-                    // Fallback to popup if fullscreen unavailable or Google Maps not ready
                     openMapWithAllRestaurants();
                 }
             });
@@ -2130,13 +2334,31 @@
         if (modal) {
             modal.style.display = 'none';
             document.body.style.overflow = 'auto';
-            
-            // Clean up fullscreen map
+
             const fullscreenMap = document.getElementById('fullscreen-map');
-            if (fullscreenMap && window.fullscreenMapInstance) {
-                window.fullscreenMapInstance.remove();
-                window.fullscreenMapInstance = null;
+            if (fullscreenMap) {
+                if (fullscreenLeafletMap) {
+                    fullscreenLeafletMap.remove();
+                    fullscreenLeafletMap = null;
+                }
+
+                fullscreenLeafletMarkers = [];
+
+                if (window.fullscreenMapInstance) {
+                    try {
+                        if (window.google && window.google.maps && window.google.maps.event) {
+                            window.google.maps.event.clearInstanceListeners(window.fullscreenMapInstance);
+                        }
+                    } catch (err) {
+                        // Ignore errors during cleanup
+                    }
+                    window.fullscreenMapInstance = null;
+                }
+
+                resetFullscreenMapContainer(fullscreenMap);
             }
+
+            fullscreenMapMode = null;
         }
     };
 
@@ -2167,17 +2389,49 @@
      */
     function initializeFullscreenMap() {
         const mapContainer = document.getElementById('fullscreen-map');
-        if (!mapContainer || !window.google) {
-            console.error('Map container not found or Google Maps not loaded');
+        if (!mapContainer) {
+            console.error('Fullscreen map container not found');
             return;
         }
 
-        // Clear existing map
-        if (window.fullscreenMapInstance) {
-            window.fullscreenMapInstance.remove();
+        if (fullscreenLeafletMap) {
+            fullscreenLeafletMap.remove();
+            fullscreenLeafletMap = null;
         }
 
-        // Create new map instance
+        fullscreenLeafletMarkers = [];
+
+        if (window.fullscreenMapInstance && window.google && window.google.maps && window.google.maps.event) {
+            try {
+                window.google.maps.event.clearInstanceListeners(window.fullscreenMapInstance);
+            } catch (error) {
+                // Ignore cleanup errors
+            }
+            window.fullscreenMapInstance = null;
+        } else if (!googleMapsLoaded) {
+            window.fullscreenMapInstance = null;
+        }
+
+        resetFullscreenMapContainer(mapContainer);
+
+        const canUseGoogle = googleMapsLoaded && window.google && window.google.maps;
+
+        if (canUseGoogle) {
+            initializeGoogleFullscreenMap(mapContainer);
+            fullscreenMapMode = 'google';
+        } else if (typeof L !== 'undefined') {
+            initializeLeafletFullscreenMap(mapContainer);
+            fullscreenMapMode = 'leaflet';
+        } else {
+            console.error('No mapping library available for fullscreen display');
+        }
+    }
+
+    function initializeGoogleFullscreenMap(mapContainer) {
+        if (!window.google || !window.google.maps) {
+            return;
+        }
+
         window.fullscreenMapInstance = new google.maps.Map(mapContainer, {
             zoom: MOROCCO_CENTER.zoom,
             center: { lat: MOROCCO_CENTER.lat, lng: MOROCCO_CENTER.lng },
@@ -2191,107 +2445,135 @@
             ]
         });
 
-        // Add all restaurants as markers
-        if (allRestaurants && allRestaurants.length > 0) {
-            const bounds = new google.maps.LatLngBounds();
-            
-            allRestaurants.forEach(restaurant => {
-                if (restaurant.latitude && restaurant.longitude) {
-                    const position = {
-                        lat: parseFloat(restaurant.latitude),
-                        lng: parseFloat(restaurant.longitude)
-                    };
+        const bounds = new google.maps.LatLngBounds();
+        let markersCount = 0;
+        let activeInfoWindow = null;
 
-                    // Create marker
-                    const marker = new google.maps.Marker({
-                        position: position,
-                        map: window.fullscreenMapInstance,
-                        title: restaurant.title,
-                        icon: {
-                            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                                <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="20" cy="20" r="18" fill="#fedc00" stroke="#0f1729" stroke-width="2"/>
-                                    <path d="M20 8c-6.627 0-12 5.373-12 12 0 6.627 12 20 12 20s12-13.373 12-20c0-6.627-5.373-12-12-12zm0 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="#0f1729"/>
-                                </svg>
-                            `),
-                            scaledSize: new google.maps.Size(40, 40),
-                            anchor: new google.maps.Point(20, 40)
-                        }
-                    });
+        (allRestaurants || []).forEach(restaurant => {
+            const coords = getRestaurantCoordinates(restaurant);
+            if (!coords) {
+                return;
+            }
 
-                    // Create info window
-                    const infoWindow = new google.maps.InfoWindow({
-                        content: `
-                            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-width: 250px; max-width: 300px; padding: 0;">
-                                <div style="display: flex; gap: 12px; align-items: flex-start;">
-                                    <div style="flex-shrink: 0;">
-                                        <img src="${restaurant.principal_image || 'https://via.placeholder.com/60x60'}" 
-                                             alt="${restaurant.title}" 
-                                             style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);" />
-                                    </div>
-                                    <div style="flex: 1; min-width: 0;">
-                                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 4px 0; line-height: 1.3; color: #0f1729;">${restaurant.title}</h3>
-                                        <p style="margin: 0 0 4px 0; font-size: 13px; line-height: 1.4; color: #6b7280;">${restaurant.address || ''}</p>
-                                        <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.4; color: #6b7280;">${restaurant.city || ''}</p>
-                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-                                            ${restaurant.phone ? `
-                                                <a href="https://wa.me/${restaurant.phone.replace(/[^0-9]/g, '')}" 
-                                                   target="_blank"
-                                                   title="WhatsApp"
-                                                   style="display: inline-flex; align-items: center; justify-content: center; padding: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 50%; width: 32px; height: 32px; transition: all 0.2s ease;"
-                                                   onmouseover="this.style.background='#128C7E'; this.style.transform='scale(1.1)'"
-                                                   onmouseout="this.style.background='#25D366'; this.style.transform='scale(1)'">
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
-                                                    </svg>
-                                                </a>
-                                            ` : ''}
-                                            <a href="${restaurant.google_maps_link || `https://www.google.com/maps?q=${restaurant.latitude},${restaurant.longitude}`}" 
-                                               target="_blank"
-                                               title="Google Maps"
-                                               style="display: inline-flex; align-items: center; justify-content: center; padding: 8px; background: #4285F4; color: white; text-decoration: none; border-radius: 50%; width: 32px; height: 32px; transition: all 0.2s ease;"
-                                               onmouseover="this.style.background='#3367D6'; this.style.transform='scale(1.1)'"
-                                               onmouseout="this.style.background='#4285F4'; this.style.transform='scale(1)'">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                                                </svg>
-                                            </a>
-                                            <a href="${window.location.origin}/details/${restaurant.slug}/" 
-                                               title="Voir détails"
-                                               style="display: inline-flex; align-items: center; justify-content: center; padding: 8px; background: linear-gradient(135deg, #fedc00 0%, #fedc00 100%); color: white; text-decoration: none; border-radius: 50%; width: 32px; height: 32px; transition: all 0.2s ease;"
-                                               onmouseover="this.style.transform='scale(1.1)'"
-                                               onmouseout="this.style.transform='scale(1)'">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                                                </svg>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `
-                    });
+            const position = { lat: coords.lat, lng: coords.lng };
+            const infoContent = buildFullscreenPopupContent(restaurant, coords);
+            const markerIconSvg = `
+                <svg width="44" height="56" viewBox="0 0 44 56" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="markerGradientGoogle" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#fedc00" />
+                            <stop offset="100%" stop-color="#f59e0b" />
+                        </linearGradient>
+                        <filter id="markerShadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="rgba(15, 23, 41, 0.3)" />
+                        </filter>
+                    </defs>
+                    <path d="M22 2C11.402 2 3 10.402 3 21c0 12.171 13.507 27.084 17.447 31.275a2 2 0 0 0 3.106 0C31.493 48.084 45 33.171 45 21 45 10.402 36.598 2 26 2z" transform="translate(-3)" fill="url(#markerGradientGoogle)" stroke="#0f1729" stroke-width="2" filter="url(#markerShadow)" />
+                    <circle cx="22" cy="20" r="7" fill="#0f1729" />
+                </svg>
+            `;
 
-                    // Add click listener to marker
-                    marker.addListener('click', function() {
-                        infoWindow.open(window.fullscreenMapInstance, marker);
-                    });
-
-                    // Extend bounds
-                    bounds.extend(position);
+            const marker = new google.maps.Marker({
+                position,
+                map: window.fullscreenMapInstance,
+                title: restaurant?.title || '',
+                icon: {
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(markerIconSvg),
+                    scaledSize: new google.maps.Size(44, 56),
+                    anchor: new google.maps.Point(22, 56)
                 }
             });
 
-            // Fit map to show all markers
-            if (allRestaurants.length > 1) {
-                window.fullscreenMapInstance.fitBounds(bounds);
-            } else if (allRestaurants.length === 1) {
-                window.fullscreenMapInstance.setCenter(bounds.getCenter());
-                window.fullscreenMapInstance.setZoom(15);
-            }
+            const infoWindow = new google.maps.InfoWindow({
+                content: infoContent,
+                maxWidth: 360
+            });
+
+            marker.addListener('click', function() {
+                if (activeInfoWindow) {
+                    activeInfoWindow.close();
+                }
+                infoWindow.open(window.fullscreenMapInstance, marker);
+                activeInfoWindow = infoWindow;
+            });
+
+            bounds.extend(position);
+            markersCount += 1;
+        });
+
+        if (markersCount > 1) {
+            window.fullscreenMapInstance.fitBounds(bounds);
+        } else if (markersCount === 1) {
+            window.fullscreenMapInstance.setCenter(bounds.getCenter());
+            window.fullscreenMapInstance.setZoom(14);
         } else {
             window.fullscreenMapInstance.setCenter({ lat: MOROCCO_CENTER.lat, lng: MOROCCO_CENTER.lng });
             window.fullscreenMapInstance.setZoom(MOROCCO_CENTER.zoom);
+        }
+    }
+
+    function initializeLeafletFullscreenMap(mapContainer) {
+        if (typeof L === 'undefined') {
+            return;
+        }
+
+        fullscreenLeafletMap = L.map(mapContainer).setView([MOROCCO_CENTER.lat, MOROCCO_CENTER.lng], MOROCCO_CENTER.zoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(fullscreenLeafletMap);
+
+        const bounds = [];
+
+        (allRestaurants || []).forEach(restaurant => {
+            const coords = getRestaurantCoordinates(restaurant);
+            if (!coords) {
+                return;
+            }
+            const marker = L.marker([coords.lat, coords.lng], {
+                icon: L.divIcon({
+                    className: 'custom-marker-with-label',
+                    html: buildLeafletMarkerIcon(restaurant),
+                    iconSize: [44, 56],
+                    iconAnchor: [22, 56],
+                    popupAnchor: [0, -50]
+                })
+            }).addTo(fullscreenLeafletMap);
+
+            marker.bindPopup(buildFullscreenPopupContent(restaurant, coords), {
+                maxWidth: 360,
+                className: 'fullscreen-map-popup'
+            });
+
+            fullscreenLeafletMarkers.push(marker);
+            bounds.push([coords.lat, coords.lng]);
+        });
+
+        if (bounds.length > 1) {
+            fullscreenLeafletMap.fitBounds(bounds, { padding: [40, 40] });
+        } else if (bounds.length === 1) {
+            fullscreenLeafletMap.setView(bounds[0], 14);
+        } else {
+            fullscreenLeafletMap.setView([MOROCCO_CENTER.lat, MOROCCO_CENTER.lng], MOROCCO_CENTER.zoom);
+        }
+
+        setTimeout(() => {
+            fullscreenLeafletMap.invalidateSize();
+        }, 200);
+    }
+
+    function resetFullscreenMapContainer(mapContainer) {
+        if (!mapContainer) {
+            return;
+        }
+
+        mapContainer.innerHTML = '';
+
+        if (mapContainer.className) {
+            mapContainer.className = mapContainer.className
+                .split(' ')
+                .filter(cls => cls && !cls.startsWith('leaflet-'))
+                .join(' ');
         }
     }
 
